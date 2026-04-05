@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import os, json, base64
+import os
+import json
+import base64
 import numpy as np
 import cv2
 
@@ -12,6 +14,16 @@ import tensorflow as tf
 
 app = Flask(__name__)
 CORS(app)
+
+# -------------------
+# Health route
+# -------------------
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "status": "OK",
+        "message": "Backend running. Use POST /predict with { imageBase64 }"
+    })
 
 # -------------------
 # Paths
@@ -30,7 +42,9 @@ if not os.path.exists(LABELS_PATH):
     raise RuntimeError("labels.json not found. Train first with train_model.py")
 
 tf_model = tf.keras.models.load_model(LETTER_MODEL)
-labels = json.load(open(LABELS_PATH, "r"))
+
+with open(LABELS_PATH, "r") as f:
+    labels = json.load(f)
 
 # -------------------
 # MediaPipe Hand Landmarker
@@ -50,15 +64,10 @@ def extract_features(hand_landmarks):
     return np.array(pts, dtype=np.float32)
 
 # -------------------
-# Thresholds (tune these)
+# Thresholds
 # -------------------
-BRIGHTNESS_MIN = 60.0     
-CONF_MIN = 0.85           
-
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"status": "OK", "message": "Use POST /predict with { imageBase64 }"})
-
+BRIGHTNESS_MIN = 60.0
+CONF_MIN = 0.85
 
 @app.route("/predict", methods=["GET", "POST"])
 def predict():
@@ -87,10 +96,10 @@ def predict():
             return jsonify({"error": "Could not decode image"}), 400
 
         # -------------------
-        # Lighting check (NEW)
+        # Lighting check
         # -------------------
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        brightness = float(np.mean(gray))  # 0..255
+        brightness = float(np.mean(gray))
         lighting_ok = brightness >= BRIGHTNESS_MIN
 
         # -------------------
@@ -123,7 +132,7 @@ def predict():
         predicted = labels[idx]
 
         # -------------------
-        # Reject low-confidence (NEW)
+        # Reject low confidence
         # -------------------
         if conf < CONF_MIN:
             return jsonify({
@@ -142,7 +151,6 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
