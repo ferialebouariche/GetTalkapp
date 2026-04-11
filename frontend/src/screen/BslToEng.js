@@ -12,9 +12,8 @@ import { ScrollView } from "react-native";
 import { useSettings } from "../context/SettingsContext";
 import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons";
 
-const ANDROID_EMULATOR_URL = "http://10.0.2.2:5000/predict";
-// iPhone / real device needs your laptop IP on same Wi-Fi
-const PC_LOCAL_IP_URL = "http://192.168.55.106:5000/predict"; //UPDATE THIS IP
+const ANDROID_EMULATOR_URL = "https://feriale-gettalk-backend.hf.space/predict";
+const PC_LOCAL_IP_URL = "https://feriale-gettalk-backend.hf.space/predict";
 
 export default function BSLToEng() {
   const { settings } = useSettings();
