@@ -1,6 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+
+os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"
+os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
+
 import json
 import base64
 import numpy as np
