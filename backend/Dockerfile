@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     libglvnd0 \
     libglx0 \
     libegl1 \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -16,6 +17,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 5000
+EXPOSE 7860
 
-CMD ["gunicorn", "api:app", "--bind", "0.0.0.0:5000", "--timeout", "120"]
+CMD ["gunicorn", "api:app", "--bind", "0.0.0.0:7860", "--timeout", "120"]
