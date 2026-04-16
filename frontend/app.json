@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "gettalk",
-    "slug": "gettalk",
+    "slug": "gettalk-frontend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -35,11 +35,11 @@
       "expo-audio",
       "expo-asset"
     ],
+    "owner": "ferialebouariche",
     "extra": {
       "eas": {
-        "projectId": "c57d1179-1b8a-4e07-aa85-fc39fda12532"
+        "projectId": "2923233f-e952-4e24-8d44-fe2f2d829a72"
       }
-    },
-    "owner": "ferialebouariche"
+    }
   }
 }

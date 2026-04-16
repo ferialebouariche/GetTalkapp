@@ -6,23 +6,27 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { ScrollView } from "react-native";
 import { useSettings } from "../context/SettingsContext";
 import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons";
+import { CameraStatusPill, GuidanceWarningBox } from "../components";
+import { sendPredictionRequest } from "../services";
+import {
+  CONF_THRESHOLD,
+  STABLE_FRAMES,
+  BSL_TO_ENG_SCREEN_TITLE,
+} from "../utils/predictionConstants";
 
-const ANDROID_EMULATOR_URL = "https://feriale-gettalk-backend.hf.space/predict";
-const PC_LOCAL_IP_URL = "https://feriale-gettalk-backend.hf.space/predict";
-
-export default function BSLToEng() {
+export default function BSLToEng({ navigation }) {
   const { settings } = useSettings();
   const cameraRef = useRef(null);
 
   const [permission, requestPermission] = useCameraPermissions();
 
   // auto-running by default (like Eng->BSL auto translate)
-  const [isRunning, setIsRunning] = useState(true);
+  const [isRunning, setIsRunning] = useState(false);
   const [englishText, setEnglishText] = useState("—");
   const [confidence, setConfidence] = useState(0);
   const [apiStatus, setApiStatus] = useState("Idle");
@@ -30,15 +34,12 @@ export default function BSLToEng() {
   const [guidanceMessage, setGuidanceMessage] = useState(""); //warning message
 
   // smoothing
-  const lastPredRef = useRef({ text: "", count: 0 });
-  const CONF_THRESHOLD = 0.85; // increase if it shows letters randomly
-  const STABLE_FRAMES = 3; // require same letter 3 times in a row
-
-  const API_URL =
-    Platform.OS === "android" ? ANDROID_EMULATOR_URL : PC_LOCAL_IP_URL;
-
+  const lastPredictionRef = useRef({ text: "", count: 0 });
+  const isProcessingRef = useRef(false);
   const fetchPredictionMobile = async () => {
+    if (isProcessingRef.current) return;
     try {
+      isProcessingRef.current = true;
       if (!cameraRef.current) {
         setApiStatus("Camera not ready");
         return;
@@ -61,13 +62,9 @@ export default function BSLToEng() {
         return;
       }
 
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: photo.base64 }),
-      });
-
-      const data = await res.json();
+      console.log("Sending frame to backend");
+      const { res, data } = await sendPredictionRequest(photo.base64);
+      console.log("Backend response:", data);
 
       if (!res.ok) {
         setApiStatus(`API error: ${res.status}`);
@@ -75,7 +72,7 @@ export default function BSLToEng() {
         //Guidance when API fialed
         if (settings.cameraGuidance) {
           setGuidanceMessage(
-            "Unable tp process your sign right now, try again later.",
+            "Unable to process your sign right now, try again later.",
           );
         }
         return;
@@ -90,11 +87,13 @@ export default function BSLToEng() {
       if (text === "No hand") {
         setApiStatus("No hand detected");
         setEnglishText("—");
-        lastPredRef.current = { text: "", count: 0 };
+        lastPredictionRef.current = { text: "", count: 0 };
 
         //show guidance only if settings is enabled
         if (settings.cameraGuidance) {
-          setGuidanceMessage("Place you hand clearly inside the camera frame.");
+          setGuidanceMessage(
+            "Place your hand clearly inside the camera frame.",
+          );
         } else {
           setGuidanceMessage("");
         }
@@ -104,7 +103,7 @@ export default function BSLToEng() {
       if (text === "—" || conf < CONF_THRESHOLD) {
         setApiStatus(`Hold steady… (${conf.toFixed(2)})`);
         setEnglishText("—");
-        lastPredRef.current = { text: "", count: 0 };
+        lastPredictionRef.current = { text: "", count: 0 };
 
         //Show guidance warning only if the setting is enables
         if (settings.cameraGuidance) {
@@ -118,14 +117,14 @@ export default function BSLToEng() {
       }
 
       // stability filter
-      const last = lastPredRef.current;
+      const last = lastPredictionRef.current;
       if (last.text === text) {
         last.count += 1;
       } else {
         last.text = text;
         last.count = 1;
       }
-      lastPredRef.current = last;
+      lastPredictionRef.current = last;
 
       if (last.count >= STABLE_FRAMES) {
         setEnglishText(text);
@@ -134,28 +133,32 @@ export default function BSLToEng() {
         setGuidanceMessage("");
         //
         setRecognisedText((prev) => {
-          if (prev.endsWith(text)) return prev;
+          const lastChar = prev.slice(-1);
+          if (lastChar === text) return prev;
           return prev + text;
         });
 
-        lastPredRef.current = { text: "", count: 0 };
+        lastPredictionRef.current = { text: "", count: 0 };
       } else {
         setApiStatus(`Stabilizing… ${last.count}/${STABLE_FRAMES}`);
 
         //Small guidance while waiting
         if (settings.cameraGuidance) {
-          setGuidanceMessage("Kepp your hand still for a moment");
+          setGuidanceMessage("Keep your hand still for a moment");
         } else {
           setGuidanceMessage("");
         }
       }
     } catch (e) {
+      console.log("Prediction error: ", e);
       setApiStatus("API connection failed");
 
       //Guidance when API failed
       if (settings.cameraGuidance) {
-        setGuidanceMessage("Tryign to conncet the API...");
+        setGuidanceMessage("Trying to connect to the API...");
       }
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
@@ -170,7 +173,7 @@ export default function BSLToEng() {
       return;
     }
 
-    const t = setInterval(fetchPredictionMobile, 900); // ~1 fps (good enough)
+    const t = setInterval(fetchPredictionMobile, 1800);
     return () => clearInterval(t);
   }, [isRunning]);
 
@@ -202,7 +205,7 @@ export default function BSLToEng() {
 
     setEnglishText("—");
     setConfidence(0);
-    lastPredRef.current = { text: "", count: 0 };
+    lastPredictionRef.current = { text: "", count: 0 };
     setApiStatus("Starting…");
     setGuidanceMessage("");
     setIsRunning(true);
@@ -216,12 +219,14 @@ export default function BSLToEng() {
     >
       {/* Top bar */}
       <View style={styles.topBar}>
-        <Pressable style={styles.topIconBtn}>
+        <Pressable
+          style={styles.topIconBtn}
+          onPress={() => navigation.goBack()}
+        >
           <Ionicons name="arrow-back" size={20} color="#111" />
         </Pressable>
 
-        <Text style={styles.topTitle}>BSL → English</Text>
-
+        <Text style={styles.topTitle}>{BSL_TO_ENG_SCREEN_TITLE}</Text>
         <Pressable style={styles.topIconBtnActive}>
           <View style={styles.liveDot} />
         </Pressable>
@@ -253,37 +258,20 @@ export default function BSLToEng() {
               </Pressable>
             </View>
           ) : (
-            <View style={{ width: "100%", height: "100%" }}>
+            <View style={styles.cameraWrapper}>
               <CameraView
                 ref={cameraRef}
                 style={styles.camera}
                 facing="front"
               />
 
-              {settings.cameraGuidance && guidanceMessage !== "" && (
-                <>
-                  <View style={styles.cornerTopLeft} />
-                  <View style={styles.cornerTopRight} />
-                  <View style={styles.cornerBottomLeft} />
-                  <View style={styles.cornerBottomRight} />
-                </>
-              )}
-
-              {guidanceMessage !== "" && (
-                <View style={styles.cameraStatusPill}>
-                  <View style={styles.cameraStatusDot} />
-                  <Text style={styles.cameraStatusText}>{apiStatus}</Text>
-                </View>
-              )}
+              {guidanceMessage !== "" && <CameraStatusPill text={apiStatus} />}
             </View>
           )}
         </View>
 
         {settings.cameraGuidance && guidanceMessage !== "" && (
-          <View style={styles.guidanceWarningBox}>
-            <Ionicons name="alert-circle-outline" size={18} color="#D07A62" />
-            <Text style={styles.guidanceWarningText}>{guidanceMessage}</Text>
-          </View>
+          <GuidanceWarningBox text={guidanceMessage} />
         )}
       </View>
 
@@ -431,100 +419,6 @@ const styles = StyleSheet.create({
   camera: {
     width: "100%",
     height: "100%",
-  },
-
-  cornerTopLeft: {
-    position: "absolute",
-    top: 36,
-    left: 36,
-    width: 52,
-    height: 52,
-    borderTopWidth: 4,
-    borderLeftWidth: 4,
-    borderColor: "#E89282",
-    borderTopLeftRadius: 10,
-  },
-
-  cornerTopRight: {
-    position: "absolute",
-    top: 36,
-    right: 36,
-    width: 52,
-    height: 52,
-    borderTopWidth: 4,
-    borderRightWidth: 4,
-    borderColor: "#E89282",
-    borderTopRightRadius: 10,
-  },
-
-  cornerBottomLeft: {
-    position: "absolute",
-    bottom: 36,
-    left: 36,
-    width: 52,
-    height: 52,
-    borderBottomWidth: 4,
-    borderLeftWidth: 4,
-    borderColor: "#E89282",
-    borderBottomLeftRadius: 10,
-  },
-
-  cornerBottomRight: {
-    position: "absolute",
-    bottom: 36,
-    right: 36,
-    width: 52,
-    height: 52,
-    borderBottomWidth: 4,
-    borderRightWidth: 4,
-    borderColor: "#E89282",
-    borderBottomRightRadius: 10,
-  },
-
-  cameraStatusPill: {
-    position: "absolute",
-    bottom: 26,
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.75)",
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-
-  cameraStatusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#E77B74",
-    marginRight: 8,
-  },
-
-  cameraStatusText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  guidanceWarningBox: {
-    marginTop: 12,
-    backgroundColor: "#FFF3F0",
-    borderWidth: 1,
-    borderColor: "#EFC9C2",
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  guidanceWarningText: {
-    color: "#C06D5F",
-    fontSize: 14,
-    fontWeight: "500",
-    marginLeft: 10,
-    flex: 1,
   },
 
   infoCard: {
@@ -713,9 +607,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
-  warning: {
-    marginTop: 8,
-    color: "#ff6b6b",
-    fontWeight: "700",
+  cameraWrapper: {
+    width: "100%",
+    height: "100%",
   },
 });

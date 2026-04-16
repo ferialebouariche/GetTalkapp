@@ -8,7 +8,7 @@ export default function HomeScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>GetTalk</Text>
-          <Text style={styles.title}>Your sign langue {"\n"} translator</Text>
+          <Text style={styles.title}>Your sign language {"\n"} translator</Text>
           <Text style={styles.subtitle}>
             Instant BSL to English translation
           </Text>
@@ -74,7 +74,7 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.cardTagDark}>TEXT TO SIGN</Text>
               </View>
               <Text style={styles.cardTitle}>
-                Enlish <Text style={styles.darkArrow}>→</Text> BSL
+                English <Text style={styles.darkArrow}>→</Text> BSL
               </Text>
               <Text style={styles.cardDescription}>
                 Type text and see it signed
@@ -86,11 +86,16 @@ export default function HomeScreen({ navigation }) {
           </Pressable>
 
           <View style={styles.tipBox}>
-            <Text style={styles.tipEmojie}>.</Text>
+            <Ionicons
+              name="bulb-outline"
+              size={22}
+              color="#F07B6B"
+              style={styles.tipIcon}
+            />
             <View style={{ flex: 1 }}>
               <Text style={styles.tipTitle}> Quick tip</Text>
               <Text style={styles.tipText}>
-                Make sure you have good lighting when signign for best
+                Make sure you have good lighting when signing for best
                 recognition accuracy
               </Text>
             </View>
@@ -110,7 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fc8484",
   },
   header: {
-    backgroundColor: "PINK",
+    backgroundColor: "#fc8484",
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 42,
@@ -147,7 +152,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItem: "center",
+    alignItems: "center",
   },
   sectionTitle: {
     fontSize: 14,
@@ -253,12 +258,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
   },
-  tipEmojie: {
-    fontSize: 100,
-    marginRight: 10,
-    marginTop: -75,
-    color: "#F07B6B",
-  },
+
   tipTitle: {
     fontSize: 18,
     fontWeight: "800",
@@ -272,5 +272,9 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.9,
     transform: [{ scale: 0.98 }],
+  },
+  tipIcon: {
+    marginRight: 10,
+    marginTop: 2,
   },
 });

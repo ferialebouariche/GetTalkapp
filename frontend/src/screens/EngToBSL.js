@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,64 +9,32 @@ import {
 } from "react-native";
 import { Video } from "expo-av";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import { normalizeText } from "../utils/textUtils";
+import { BSL_VIDEO_MAP } from "../utils/bslVideoMap";
 
-//BSL video
-const BSL_AVATAR = {
-  hello: require("../../assets/bsl/hello.mp4"),
-  thank_you: require("../../assets/bsl/thank_you.mp4"),
-  cough_medicine: require("../../assets/bsl/cough_medicine.mp4"),
-  how_old: require("../../assets/bsl/how_old.mp4"),
-  allergy: require("../../assets/bsl/allergy.mp4"),
-  amazing: require("../../assets/bsl/amazing.mp4"),
-  appointment: require("../../assets/bsl/appointment.mp4"),
-  deaf: require("../../assets/bsl/deaf.mp4"),
-  exam: require("../../assets/bsl/exam.mp4"),
-  good_morning: require("../../assets/bsl/good_morning.mp4"),
-  how_are_you: require("../../assets/bsl/how_are_you.mp4"),
-  I_am_deaf: require("../../assets/bsl/I_am_deaf.mp4"),
-  mask: require("../../assets/bsl/mask.mp4"),
-  monday: require("../../assets/bsl/Monday.mp4"),
-  sick: require("../../assets/bsl/sick.mp4"),
-  sign: require("../../assets/bsl/sign.mp4"),
-  tomorrow: require("../../assets/bsl/tomorrow.mp4"),
-  when: require("../../assets/bsl/when.mp4"),
-  where_does_it_hurt: require("../../assets/bsl/where_does_it_hurt.mp4"),
-  where: require("../../assets/bsl/where.mp4"),
-  yesterday: require("../../assets/bsl/yesterday.mp4"),
-};
-
-// Normalize input: lowercase, remove punctuation, normalize spaces
-const normalize = (s) =>
-  (s || "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s]/g, "") // remove punctuation
-    .replace(/\s+/g, " "); // normalize spaces
+const DEFAULT_MESSAGE = 'Type something like "hello" or "Thank you".';
+const SCREEN_TITLE = "English → BSL";
 
 export default function EngToBSL({ navigation }) {
   const [text, setText] = useState("");
   const [videoSource, setVideoSource] = useState(null);
-  const [message, setMessage] = useState(
-    'Type something like "hello" or "thank you".',
-  );
-
-  const videoRef = useRef(null);
+  const [message, setMessage] = useState(DEFAULT_MESSAGE);
 
   // Auto-translate whenever text changes
   useEffect(() => {
-    const clean = normalize(text);
+    const clean = normalizeText(text);
 
     if (!clean) {
       setVideoSource(null);
-      setMessage('Type something like "hello" or "thank you".');
+      setMessage(DEFAULT_MESSAGE);
       return;
     }
 
     // Convert spaces to underscore for dictionary keys: "thank you" -> "thank_you"
     const key = clean.replace(/\s+/g, "_");
 
-    if (BSL_AVATAR[key]) {
-      setVideoSource(BSL_AVATAR[key]);
+    if (BSL_VIDEO_MAP[key]) {
+      setVideoSource(BSL_VIDEO_MAP[key]);
       setMessage(`Matched phrase: "${clean}"`);
     } else {
       setVideoSource(null);
@@ -77,16 +45,15 @@ export default function EngToBSL({ navigation }) {
   const onClear = () => {
     setText("");
     setVideoSource(null);
-    setMessage('Type something like "hello" or "thank you".');
+    setMessage(DEFAULT_MESSAGE);
   };
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={{ paddingBottom: 32 }}
-      showsVerticrollIndicator={false}
+      showsVerticalScrollIndicator={false}
     >
-     
       <View style={styles.topBar}>
         <Pressable
           style={styles.topIconBtn}
@@ -94,10 +61,8 @@ export default function EngToBSL({ navigation }) {
         >
           <Ionicons name="arrow-back" size={18} color="#111" />
         </Pressable>
-        <Text style={styles.title}>English → BSL</Text>
-        <Pressable style={styles.topIconBtn}>
-          <Ionicons name="search-outline" size={18} color="#111" />
-        </Pressable>
+        <Text style={styles.title}>{SCREEN_TITLE}</Text>
+        <View style={styles.topIconBtnPlaceholder} />
       </View>
       {/*Input section */}
       <Text style={styles.label}>Enter English text</Text>
@@ -118,6 +83,9 @@ export default function EngToBSL({ navigation }) {
           autoCapitalize="none"
         />
       </View>
+
+      <Text style={styles.messageText}>{message}</Text>
+
       <View style={styles.chipsRow}>
         <Text style={styles.chipsLabel}>Try:</Text>
         <View style={styles.chips}>
@@ -137,7 +105,6 @@ export default function EngToBSL({ navigation }) {
       <View style={styles.avatarBox}>
         {videoSource ? (
           <Video
-            ref={videoRef}
             source={videoSource}
             style={styles.video}
             resizeMode="cover"
@@ -160,13 +127,6 @@ export default function EngToBSL({ navigation }) {
         )}
       </View>
 
-      {/*Main section*/}
-      <Pressable style={styles.translationBtn}>
-        <View style={styles.translationBtnInner}>
-          <Ionicons name="hand-left" size={16} color="#fff" />
-          <Text style={styles.translateBtnText}> Translate to BSL </Text>
-        </View>
-      </Pressable>
       {/*Clear button */}
       <Pressable style={styles.clearBtn} onPress={onClear}>
         <Text style={styles.clearText}>Clear</Text>
@@ -287,7 +247,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
-    zIndex: 1
+    zIndex: 1,
   },
 
   video: {
@@ -322,28 +282,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
   },
-  translateBtn: {
-    height: 54,
-    borderRadius: 16,
-    backgroundColor: "#E97D6B",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-    zIndex: 0
-  },
-
-  translateBtnInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  translateBtnText: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 16,
-  },
-
   clearBtn: {
     height: 52,
     borderRadius: 16,
@@ -358,5 +296,16 @@ const styles = StyleSheet.create({
     color: "#f6f2f2",
     fontWeight: "700",
     fontSize: 16,
+  },
+  messageText: {
+    marginTop: 10,
+    marginBottom: 10,
+    fontSize: 14,
+    color: "#888",
+    fontWeight: "600",
+  },
+  topIconBtnPlaceholder: {
+    width: 38,
+    height: 38,
   },
 });
