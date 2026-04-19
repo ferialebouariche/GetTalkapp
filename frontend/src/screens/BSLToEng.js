@@ -265,7 +265,7 @@ export default function BSLToEng({ navigation }) {
                 facing="front"
               />
 
-              {guidanceMessage !== "" && <CameraStatusPill text={apiStatus} />}
+              {isRunning && <CameraStatusPill text={apiStatus} />}
             </View>
           )}
         </View>

@@ -70,7 +70,7 @@ def extract_features(hand_landmarks):
 # Thresholds
 # -------------------
 BRIGHTNESS_MIN = 60.0
-CONF_MIN = 0.85
+CONF_MIN = 0.90
 
 # -------------------
 # Health check
