@@ -7,6 +7,6 @@ GetTalk is a mobile application designed to support communication between Britis
 - `backend/` - Flask API and machine learning processing
 
 ## Notes
-- The backend is locally hosted
-- The mobile app and backend must be connected on the same network for full functionality
-- The local IP may need to be updated before running the project
+- you may need to run the Backend url 5min before testing the app, the URL stopp working after 48h of the last use
+- please run the following url:
+https://huggingface.co/spaces/feriale/gettalk-backend
